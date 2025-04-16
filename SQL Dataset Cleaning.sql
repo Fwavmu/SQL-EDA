@@ -1,8 +1,10 @@
 -- Data Cleaning
 
+-- Viewing the raw data
 SELECT *
 FROM layoffs;
 
+-- Creating a staging table with the same structure
 CREATE TABLE layoffs_staging
 LIKE layoffs;
 
@@ -15,6 +17,7 @@ FROM layoffs;
 
 -- Removing duplicates
 
+-- Checking for duplicates by generating a row number for each record based on key fields
 SELECT*,
 ROW_NUMBER() OVER (
 PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
@@ -33,6 +36,7 @@ SELECT *
 FROM duplicate_cte
 WHERE row_num >1;
 
+-- Creating a second staging table with an additional row_num column
 CREATE TABLE `layoffs_staging2` (
   `company` text,
   `location` text,
@@ -64,6 +68,7 @@ industry, total_laid_off, percentage_laid_off, `date`, stage,
  country, funds_raised_millions) AS row_num
 FROM layoffs_staging;
 
+-- Deleting duplicate rows (where row_num > 1)
 DELETE
 FROM layoffs_staging2
 WHERE row_num >1;
@@ -76,9 +81,11 @@ FROM layoffs_staging2;
 SELECT company, TRIM(company)
 FROM layoffs_staging2;
 
+--Standardizing company names (removing leading/trailing spaces)
 UPDATE layoffs_staging2
 SET company = TRIM(company);
 
+-- Standardizing industry names
 SELECT *
 FROM layoffs_staging2
 WHERE industry LIKE 'Crypto%';
@@ -90,6 +97,7 @@ WHERE industry LIKE 'Crypto%';
 SELECT DISTINCT industry
 FROM layoffs_staging2;
 
+-- Standardizing country values
 SELECT DISTINCT country, TRIM(TRAILING '.' FROM country)
 FROM layoffs_staging2
 ORDER BY 1;
@@ -112,6 +120,7 @@ SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
 ALTER TABLE layoffs_staging2
 MODIFY COLUMN `date` DATE;
 
+-- Checking for records where both layoff fields are NULL
 SELECT *
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL
@@ -149,6 +158,7 @@ FROM layoffs_staging2
 WHERE total_laid_off IS NULL
 AND percentage_laid_off IS NULL;
 
+-- Deleting rows with no layoff data
 DELETE
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL
